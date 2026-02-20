@@ -63,6 +63,8 @@ function App() {
   const [channel, setChannel] = useState<number>(loadChannel);
   const [bankName, setBankName] = useState<string>(loadBankName);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const [pasteOpen, setPasteOpen] = useState(false);
+  const [pasteValue, setPasteValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   const midi = useMIDI();
@@ -103,36 +105,42 @@ function App() {
     URL.revokeObjectURL(url);
   }, [bankName, channel, knobs]);
 
+  const applyBankJSON = useCallback(
+    (json: string): boolean => {
+      try {
+        const bank: Bank = JSON.parse(json);
+        if (typeof bank.channel !== "number" || !Array.isArray(bank.controls)) {
+          alert("Invalid bank data.");
+          return false;
+        }
+        handleChannelChange(bank.channel);
+        if (bank.name) handleBankNameChange(bank.name);
+        const newKnobs: KnobConfig[] = bank.controls.map((c, i) => ({
+          id: i,
+          label: c.name,
+          ccNumber: c.cc,
+          value: 0,
+        }));
+        setKnobs(newKnobs);
+        localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(newKnobs));
+        return true;
+      } catch {
+        alert("Failed to parse bank data.");
+        return false;
+      }
+    },
+    [handleChannelChange, handleBankNameChange],
+  );
+
   const importBank = useCallback(
     (file: File) => {
       const reader = new FileReader();
       reader.onload = (e) => {
-        try {
-          const bank: Bank = JSON.parse(e.target?.result as string);
-          if (
-            typeof bank.channel !== "number" ||
-            !Array.isArray(bank.controls)
-          ) {
-            alert("Invalid bank file.");
-            return;
-          }
-          handleChannelChange(bank.channel);
-          if (bank.name) handleBankNameChange(bank.name);
-          const newKnobs: KnobConfig[] = bank.controls.map((c, i) => ({
-            id: i,
-            label: c.name,
-            ccNumber: c.cc,
-            value: 0,
-          }));
-          setKnobs(newKnobs);
-          localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(newKnobs));
-        } catch {
-          alert("Failed to parse bank file.");
-        }
+        applyBankJSON(e.target?.result as string);
       };
       reader.readAsText(file);
     },
-    [handleChannelChange, handleBankNameChange],
+    [applyBankJSON],
   );
 
   const handleValueChange = useCallback(
@@ -213,7 +221,7 @@ function App() {
           <button
             className="header-btn"
             onClick={() => fileInputRef.current?.click()}
-            title="Import Bank"
+            title="Import Bank from File"
           >
             <svg
               width="16"
@@ -226,6 +234,30 @@ function App() {
               strokeLinejoin="round"
             >
               <path d="M2 13V6.5a1 1 0 0 1 1-1h2.5L7 3.5h5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z" />
+            </svg>
+          </button>
+
+          <button
+            className="header-btn"
+            onClick={() => {
+              setPasteValue("");
+              setPasteOpen(true);
+            }}
+            title="Import Bank from JSON"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <rect x="4" y="2" width="8" height="12" rx="1" />
+              <path d="M6 2V1.5a.5.5 0 0 1 .5-.5h3a.5.5 0 0 1 .5.5V2" />
+              <path d="M6.5 6h3M6.5 8.5h3M6.5 11h2" />
             </svg>
           </button>
 
@@ -266,6 +298,42 @@ function App() {
           />
         ))}
       </main>
+
+      {pasteOpen && (
+        <div className="modal-backdrop" onClick={() => setPasteOpen(false)}>
+          <div className="modal-dialog" onClick={(e) => e.stopPropagation()}>
+            <div className="modal-header">
+              <h2>Import JSON</h2>
+              <button
+                className="modal-close"
+                onClick={() => setPasteOpen(false)}
+              >
+                ×
+              </button>
+            </div>
+            <div className="modal-body">
+              <textarea
+                className="paste-textarea"
+                placeholder="Paste bank JSON here..."
+                value={pasteValue}
+                onChange={(e) => setPasteValue(e.target.value)}
+                rows={10}
+              />
+              <button
+                className="paste-import-btn"
+                disabled={!pasteValue.trim()}
+                onClick={() => {
+                  if (applyBankJSON(pasteValue)) {
+                    setPasteOpen(false);
+                  }
+                }}
+              >
+                Import
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
 
       <SettingsModal
         isOpen={settingsOpen}
