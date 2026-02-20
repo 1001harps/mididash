@@ -169,6 +169,32 @@
   gap: 16px;
 }
 
+/* Add control button */
+.add-control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: transparent;
+  border: 2px dashed #333;
+  border-radius: 8px;
+  color: #555;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  min-height: 180px;
+}
+
+.add-control-btn:hover {
+  border-color: #555;
+  color: #999;
+}
+
 /* Paste import modal */
 .paste-textarea {
   width: 100%;

@@ -9,6 +9,7 @@ export interface KnobControlProps {
   onLabelChange: (label: string) => void;
   onCCChange: (cc: number) => void;
   onValueChange: (value: number) => void;
+  onRemove?: () => void;
 }
 
 export const KnobControl: FC<KnobControlProps> = ({
@@ -18,11 +19,21 @@ export const KnobControl: FC<KnobControlProps> = ({
   onLabelChange,
   onCCChange,
   onValueChange,
+  onRemove,
 }) => {
   const midiValue = Math.round(value * 127);
 
   return (
     <div className="knob-control">
+      {onRemove && (
+        <button
+          className="knob-remove-btn"
+          onClick={onRemove}
+          title="Remove control"
+        >
+          ×
+        </button>
+      )}
       <input
         className="knob-label"
         type="text"

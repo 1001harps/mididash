@@ -1,4 +1,5 @@
 .knob-control {
+  position: relative;
   display: flex;
   flex-direction: column;
   align-items: center;
@@ -7,6 +8,37 @@
   background: #1e1e1e;
   border-radius: 8px;
   border: 1px solid #333;
+}
+
+.knob-remove-btn {
+  position: absolute;
+  top: 4px;
+  right: 4px;
+  width: 20px;
+  height: 20px;
+  padding: 0;
+  background: transparent;
+  border: none;
+  border-radius: 4px;
+  color: #666;
+  font-size: 16px;
+  line-height: 1;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  opacity: 0;
+  transition:
+    opacity 0.15s,
+    color 0.15s;
+}
+
+.knob-control:hover .knob-remove-btn {
+  opacity: 1;
+}
+
+.knob-remove-btn:hover {
+  color: #e57373;
 }
 
 .knob-label {

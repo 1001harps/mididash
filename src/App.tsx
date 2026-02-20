@@ -77,6 +77,31 @@ function App() {
     });
   }, []);
 
+  const addKnob = useCallback(() => {
+    setKnobs((prev) => {
+      const maxId = prev.reduce((m, k) => Math.max(m, k.id), 0);
+      const next = [
+        ...prev,
+        {
+          id: maxId + 1,
+          label: `Knob ${prev.length + 1}`,
+          ccNumber: prev.length + 1,
+          value: 0,
+        },
+      ];
+      localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
+  const removeKnob = useCallback((id: number) => {
+    setKnobs((prev) => {
+      const next = prev.filter((k) => k.id !== id);
+      localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(next));
+      return next;
+    });
+  }, []);
+
   const handleChannelChange = useCallback((ch: number) => {
     if (ch >= 1 && ch <= 16) {
       setChannel(ch);
@@ -317,8 +342,28 @@ function App() {
             onLabelChange={(label) => updateKnob(knob.id, { label })}
             onCCChange={(ccNumber) => updateKnob(knob.id, { ccNumber })}
             onValueChange={(value) => handleValueChange(knob, value)}
+            onRemove={() => removeKnob(knob.id)}
           />
         ))}
+        <button
+          className="add-control-btn"
+          onClick={addKnob}
+          title="Add control"
+        >
+          <svg
+            width="32"
+            height="32"
+            viewBox="0 0 32 32"
+            fill="none"
+            stroke="currentColor"
+            strokeWidth="2"
+            strokeLinecap="round"
+          >
+            <line x1="16" y1="10" x2="16" y2="22" />
+            <line x1="10" y1="16" x2="22" y2="16" />
+          </svg>
+          <span>Add Control</span>
+        </button>
       </main>
 
       {pasteOpen && (
