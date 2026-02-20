@@ -151,6 +151,12 @@ function App() {
     [channel, midi, updateKnob],
   );
 
+  const sendAll = useCallback(() => {
+    for (const knob of knobs) {
+      midi.sendCC(channel - 1, knob.ccNumber, Math.round(knob.value * 127));
+    }
+  }, [channel, knobs, midi]);
+
   return (
     <div className="app">
       <header className="header">
@@ -279,6 +285,22 @@ function App() {
             title="Settings"
           >
             ⚙
+          </button>
+
+          <button
+            className="header-btn send-btn"
+            onClick={sendAll}
+            title="Send All CCs"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="currentColor"
+              stroke="none"
+            >
+              <path d="M4 2.5v11l9-5.5z" />
+            </svg>
           </button>
         </div>
       </header>
