@@ -1,15 +1,9 @@
 import { useState, useCallback, useRef } from "react";
 import { useMIDI } from "./hooks/useMIDI";
-import { KnobControl } from "./components/KnobControl";
+import { Rack } from "./components/Rack";
+import type { RackConfig, KnobConfig } from "./components/Rack";
 import { SettingsModal } from "./components/SettingsModal";
 import "./App.css";
-
-interface KnobConfig {
-  id: number;
-  label: string;
-  ccNumber: number;
-  value: number;
-}
 
 interface Control {
   cc: number;
@@ -22,140 +16,219 @@ interface Bank {
   controls: Control[];
 }
 
-const STORAGE_KEY_KNOBS = "mididash-knobs";
-const STORAGE_KEY_CHANNEL = "mididash-channel";
-const STORAGE_KEY_BANK_NAME = "mididash-bank-name";
+const STORAGE_KEY_RACKS = "mididash-racks";
 
-function loadBankName(): string {
-  return localStorage.getItem(STORAGE_KEY_BANK_NAME) || "Untitled Bank";
+function defaultRack(id = 0): RackConfig {
+  return {
+    id,
+    name: "Untitled Rack",
+    channel: 1,
+    knobs: Array.from({ length: 10 }, (_, i) => ({
+      id: i,
+      label: `Knob ${i + 1}`,
+      ccNumber: i + 1,
+      value: 0,
+    })),
+  };
 }
 
-function loadKnobs(): KnobConfig[] {
+function loadRacks(): RackConfig[] {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY_KNOBS);
+    const saved = localStorage.getItem(STORAGE_KEY_RACKS);
     if (saved) return JSON.parse(saved);
   } catch {
     /* ignore */
   }
-  return Array.from({ length: 10 }, (_, i) => ({
-    id: i,
-    label: `Knob ${i + 1}`,
-    ccNumber: i + 1,
-    value: 0,
-  }));
-}
-
-function loadChannel(): number {
-  try {
-    const saved = localStorage.getItem(STORAGE_KEY_CHANNEL);
-    if (saved) {
-      const n = parseInt(saved, 10);
-      if (n >= 1 && n <= 16) return n;
-    }
-  } catch {
-    /* ignore */
-  }
-  return 1;
+  return [defaultRack()];
 }
 
 function App() {
-  const [knobs, setKnobs] = useState<KnobConfig[]>(loadKnobs);
-  const [channel, setChannel] = useState<number>(loadChannel);
-  const [bankName, setBankName] = useState<string>(loadBankName);
+  const [racks, setRacks] = useState<RackConfig[]>(loadRacks);
   const [settingsOpen, setSettingsOpen] = useState(false);
   const [pasteOpen, setPasteOpen] = useState(false);
   const [pasteValue, setPasteValue] = useState("");
   const fileInputRef = useRef<HTMLInputElement>(null);
+  const racksRef = useRef(racks);
+  racksRef.current = racks;
 
   const midi = useMIDI();
 
-  const updateKnob = useCallback((id: number, patch: Partial<KnobConfig>) => {
-    setKnobs((prev) => {
-      const next = prev.map((k) => (k.id === id ? { ...k, ...patch } : k));
-      localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const saveAndSetRacks = useCallback(
+    (updater: (prev: RackConfig[]) => RackConfig[]) => {
+      setRacks((prev) => {
+        const next = updater(prev);
+        localStorage.setItem(STORAGE_KEY_RACKS, JSON.stringify(next));
+        return next;
+      });
+    },
+    [],
+  );
 
-  const addKnob = useCallback(() => {
-    setKnobs((prev) => {
-      const maxId = prev.reduce((m, k) => Math.max(m, k.id), 0);
-      const next = [
-        ...prev,
-        {
-          id: maxId + 1,
-          label: `Knob ${prev.length + 1}`,
-          ccNumber: prev.length + 1,
-          value: 0,
-        },
-      ];
-      localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(next));
-      return next;
-    });
-  }, []);
+  const updateRack = useCallback(
+    (rackId: number, patch: Partial<Omit<RackConfig, "knobs">>) => {
+      saveAndSetRacks((prev) =>
+        prev.map((r) => (r.id === rackId ? { ...r, ...patch } : r)),
+      );
+    },
+    [saveAndSetRacks],
+  );
 
-  const removeKnob = useCallback((id: number) => {
-    setKnobs((prev) => {
-      const next = prev.filter((k) => k.id !== id);
-      localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(next));
-      return next;
+  const addRack = useCallback(() => {
+    saveAndSetRacks((prev) => {
+      const maxId = prev.reduce((m, r) => Math.max(m, r.id), -1);
+      return [...prev, defaultRack(maxId + 1)];
     });
-  }, []);
+  }, [saveAndSetRacks]);
 
-  const handleChannelChange = useCallback((ch: number) => {
-    if (ch >= 1 && ch <= 16) {
-      setChannel(ch);
-      localStorage.setItem(STORAGE_KEY_CHANNEL, String(ch));
+  const removeRack = useCallback(
+    (rackId: number) => {
+      saveAndSetRacks((prev) => prev.filter((r) => r.id !== rackId));
+    },
+    [saveAndSetRacks],
+  );
+
+  const updateKnob = useCallback(
+    (rackId: number, knobId: number, patch: Partial<KnobConfig>) => {
+      saveAndSetRacks((prev) =>
+        prev.map((r) =>
+          r.id === rackId
+            ? {
+                ...r,
+                knobs: r.knobs.map((k) =>
+                  k.id === knobId ? { ...k, ...patch } : k,
+                ),
+              }
+            : r,
+        ),
+      );
+    },
+    [saveAndSetRacks],
+  );
+
+  const addKnob = useCallback(
+    (rackId: number) => {
+      saveAndSetRacks((prev) =>
+        prev.map((r) => {
+          if (r.id !== rackId) return r;
+          const maxId = r.knobs.reduce((m, k) => Math.max(m, k.id), -1);
+          return {
+            ...r,
+            knobs: [
+              ...r.knobs,
+              {
+                id: maxId + 1,
+                label: `Knob ${r.knobs.length + 1}`,
+                ccNumber: r.knobs.length + 1,
+                value: 0,
+              },
+            ],
+          };
+        }),
+      );
+    },
+    [saveAndSetRacks],
+  );
+
+  const removeKnob = useCallback(
+    (rackId: number, knobId: number) => {
+      saveAndSetRacks((prev) =>
+        prev.map((r) =>
+          r.id === rackId
+            ? { ...r, knobs: r.knobs.filter((k) => k.id !== knobId) }
+            : r,
+        ),
+      );
+    },
+    [saveAndSetRacks],
+  );
+
+  const handleValueChange = useCallback(
+    (rackId: number, knobId: number, value: number) => {
+      updateKnob(rackId, knobId, { value });
+      const rack = racksRef.current.find((r) => r.id === rackId);
+      if (rack) {
+        const knob = rack.knobs.find((k) => k.id === knobId);
+        if (knob) {
+          midi.sendCC(rack.channel - 1, knob.ccNumber, Math.round(value * 127));
+        }
+      }
+    },
+    [midi, updateKnob],
+  );
+
+  const sendAll = useCallback(
+    (rackId: number) => {
+      const rack = racksRef.current.find((r) => r.id === rackId);
+      if (!rack) return;
+      for (const knob of rack.knobs) {
+        midi.sendCC(
+          rack.channel - 1,
+          knob.ccNumber,
+          Math.round(knob.value * 127),
+        );
+      }
+    },
+    [midi],
+  );
+
+  const sendAllRacks = useCallback(() => {
+    for (const rack of racksRef.current) {
+      for (const knob of rack.knobs) {
+        midi.sendCC(
+          rack.channel - 1,
+          knob.ccNumber,
+          Math.round(knob.value * 127),
+        );
+      }
     }
-  }, []);
+  }, [midi]);
 
-  const handleBankNameChange = useCallback((name: string) => {
-    setBankName(name);
-    localStorage.setItem(STORAGE_KEY_BANK_NAME, name);
-  }, []);
-
-  const exportBank = useCallback(() => {
-    const bank: Bank = {
-      name: bankName,
-      channel,
-      controls: knobs.map((k) => ({ cc: k.ccNumber, name: k.label })),
-    };
-    const json = JSON.stringify(bank, null, 2);
+  const exportBanks = useCallback(() => {
+    const banks: Bank[] = racksRef.current.map((r) => ({
+      name: r.name,
+      channel: r.channel,
+      controls: r.knobs.map((k) => ({ cc: k.ccNumber, name: k.label })),
+    }));
+    const json = JSON.stringify(banks, null, 2);
     const blob = new Blob([json], { type: "application/json" });
     const url = URL.createObjectURL(blob);
     const a = document.createElement("a");
     a.href = url;
-    a.download = `${bankName.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    const firstName = racksRef.current[0]?.name || "mididash";
+    a.download = `${firstName.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
     a.click();
     URL.revokeObjectURL(url);
-  }, [bankName, channel, knobs]);
+  }, []);
 
-  const applyBankJSON = useCallback(
-    (json: string): boolean => {
-      try {
-        const bank: Bank = JSON.parse(json);
-        if (typeof bank.channel !== "number" || !Array.isArray(bank.controls)) {
+  const applyBankJSON = useCallback((json: string): boolean => {
+    try {
+      const parsed = JSON.parse(json);
+      const banks: Bank[] = parsed;
+      for (const b of banks) {
+        if (typeof b.channel !== "number" || !Array.isArray(b.controls)) {
           alert("Invalid bank data.");
           return false;
         }
-        handleChannelChange(bank.channel);
-        if (bank.name) handleBankNameChange(bank.name);
-        const newKnobs: KnobConfig[] = bank.controls.map((c, i) => ({
-          id: i,
+      }
+      const newRacks: RackConfig[] = banks.map((b, i) => ({
+        id: i,
+        name: b.name || "Untitled Rack",
+        channel: Math.max(1, Math.min(16, b.channel)),
+        knobs: b.controls.map((c, j) => ({
+          id: j,
           label: c.name,
           ccNumber: c.cc,
           value: 0,
-        }));
-        setKnobs(newKnobs);
-        localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(newKnobs));
-        return true;
-      } catch {
-        alert("Failed to parse bank data.");
-        return false;
-      }
-    },
-    [handleChannelChange, handleBankNameChange],
-  );
+        })),
+      }));
+      setRacks(newRacks);
+      localStorage.setItem(STORAGE_KEY_RACKS, JSON.stringify(newRacks));
+      return true;
+    } catch {
+      alert("Failed to parse bank data.");
+      return false;
+    }
+  }, []);
 
   const importBank = useCallback(
     (file: File) => {
@@ -168,33 +241,10 @@ function App() {
     [applyBankJSON],
   );
 
-  const handleValueChange = useCallback(
-    (knob: KnobConfig, value: number) => {
-      updateKnob(knob.id, { value });
-      midi.sendCC(channel - 1, knob.ccNumber, Math.round(value * 127));
-    },
-    [channel, midi, updateKnob],
-  );
-
-  const sendAll = useCallback(() => {
-    for (const knob of knobs) {
-      midi.sendCC(channel - 1, knob.ccNumber, Math.round(knob.value * 127));
-    }
-  }, [channel, knobs, midi]);
-
   return (
     <div className="app">
       <header className="header">
-        <div className="title-group">
-          <h1 className="title">Mididash</h1>
-          <input
-            className="bank-name-input"
-            type="text"
-            value={bankName}
-            onChange={(e) => handleBankNameChange(e.target.value)}
-            placeholder="Bank name"
-          />
-        </div>
+        <h1 className="title">Mididash</h1>
 
         <div className="header-controls">
           <div className="status-group">
@@ -210,30 +260,10 @@ function App() {
             </span>
           </div>
 
-          <div className="channel-group">
-            <label className="channel-label" htmlFor="channel-select">
-              CH
-            </label>
-            <select
-              id="channel-select"
-              className="channel-select"
-              value={channel}
-              onChange={(e) =>
-                handleChannelChange(parseInt(e.target.value, 10))
-              }
-            >
-              {Array.from({ length: 16 }, (_, i) => (
-                <option key={i + 1} value={i + 1}>
-                  {i + 1}
-                </option>
-              ))}
-            </select>
-          </div>
-
           <button
             className="header-btn"
-            onClick={exportBank}
-            title="Export Bank"
+            onClick={exportBanks}
+            title="Export"
           >
             <svg
               width="16"
@@ -252,7 +282,7 @@ function App() {
           <button
             className="header-btn"
             onClick={() => fileInputRef.current?.click()}
-            title="Import Bank from File"
+            title="Import from File"
           >
             <svg
               width="16"
@@ -274,7 +304,7 @@ function App() {
               setPasteValue("");
               setPasteOpen(true);
             }}
-            title="Import Bank from JSON"
+            title="Import from JSON"
           >
             <svg
               width="16"
@@ -314,7 +344,7 @@ function App() {
 
           <button
             className="header-btn send-btn"
-            onClick={sendAll}
+            onClick={sendAllRacks}
             title="Send All CCs"
           >
             <svg
@@ -332,39 +362,45 @@ function App() {
 
       {midi.error && <div className="error-banner">{midi.error}</div>}
 
-      <main className="knob-grid">
-        {knobs.map((knob) => (
-          <KnobControl
-            key={knob.id}
-            label={knob.label}
-            ccNumber={knob.ccNumber}
-            value={knob.value}
-            onLabelChange={(label) => updateKnob(knob.id, { label })}
-            onCCChange={(ccNumber) => updateKnob(knob.id, { ccNumber })}
-            onValueChange={(value) => handleValueChange(knob, value)}
-            onRemove={() => removeKnob(knob.id)}
+      <div className="racks-container">
+        {racks.map((rack) => (
+          <Rack
+            key={rack.id}
+            rack={rack}
+            onNameChange={(name) => updateRack(rack.id, { name })}
+            onChannelChange={(channel) => updateRack(rack.id, { channel })}
+            onAddKnob={() => addKnob(rack.id)}
+            onRemoveKnob={(knobId) => removeKnob(rack.id, knobId)}
+            onKnobLabelChange={(knobId, label) =>
+              updateKnob(rack.id, knobId, { label })
+            }
+            onKnobCCChange={(knobId, ccNumber) =>
+              updateKnob(rack.id, knobId, { ccNumber })
+            }
+            onKnobValueChange={(knobId, value) =>
+              handleValueChange(rack.id, knobId, value)
+            }
+            onRemoveRack={() => removeRack(rack.id)}
+            onSendAll={() => sendAll(rack.id)}
           />
         ))}
-        <button
-          className="add-control-btn"
-          onClick={addKnob}
-          title="Add control"
+      </div>
+
+      <button className="add-rack-btn" onClick={addRack}>
+        <svg
+          width="18"
+          height="18"
+          viewBox="0 0 20 20"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth="2"
+          strokeLinecap="round"
         >
-          <svg
-            width="32"
-            height="32"
-            viewBox="0 0 32 32"
-            fill="none"
-            stroke="currentColor"
-            strokeWidth="2"
-            strokeLinecap="round"
-          >
-            <line x1="16" y1="10" x2="16" y2="22" />
-            <line x1="10" y1="16" x2="22" y2="16" />
-          </svg>
-          <span>Add Control</span>
-        </button>
-      </main>
+          <line x1="10" y1="4" x2="10" y2="16" />
+          <line x1="4" y1="10" x2="16" y2="10" />
+        </svg>
+        Add Rack
+      </button>
 
       {pasteOpen && (
         <div className="modal-backdrop" onClick={() => setPasteOpen(false)}>

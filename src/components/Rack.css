@@ -1,0 +1,123 @@
+.rack {
+  border: 1px solid #2a2a2a;
+  border-radius: 8px;
+  overflow: hidden;
+}
+
+.rack-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: #1a1a1a;
+  border-bottom: 1px solid #2a2a2a;
+}
+
+.rack-collapse-btn {
+  background: none;
+  border: none;
+  color: #666;
+  cursor: pointer;
+  padding: 2px 4px;
+  line-height: 0;
+  flex-shrink: 0;
+}
+
+.rack-collapse-btn:hover {
+  color: #aaa;
+}
+
+.rack-name-input {
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 14px;
+  font-weight: 600;
+  font-family: inherit;
+  padding: 2px 6px;
+  flex: 1;
+  transition: border-color 0.15s;
+}
+
+.rack-name-input:hover {
+  border-color: #444;
+}
+
+.rack-name-input:focus {
+  border-color: #666;
+  color: #e0e0e0;
+  outline: none;
+}
+
+.rack-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.rack-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 5px;
+  color: #ccc;
+  font-size: 14px;
+  padding: 4px 8px;
+  cursor: pointer;
+  line-height: 0;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  transition: border-color 0.15s;
+}
+
+.rack-btn:hover {
+  border-color: #666;
+  color: #fff;
+}
+
+.rack-remove-btn {
+  line-height: 1;
+  font-size: 18px;
+  padding: 1px 7px;
+  color: #666;
+}
+
+.rack-remove-btn:hover {
+  color: #e57373;
+  border-color: #6b2c2c;
+}
+
+/* Knob grid */
+.knob-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
+  padding: 16px;
+}
+
+/* Add control button */
+.add-control-btn {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: transparent;
+  border: 2px dashed #333;
+  border-radius: 8px;
+  color: #555;
+  font-size: 13px;
+  font-family: inherit;
+  cursor: pointer;
+  transition:
+    border-color 0.15s,
+    color 0.15s;
+  min-height: 180px;
+}
+
+.add-control-btn:hover {
+  border-color: #555;
+  color: #999;
+}
