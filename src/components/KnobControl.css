@@ -1,0 +1,90 @@
+.knob-control {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 8px;
+  padding: 16px 12px;
+  background: #1e1e1e;
+  border-radius: 8px;
+  border: 1px solid #333;
+}
+
+.knob-label {
+  width: 100%;
+  text-align: center;
+  background: transparent;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 13px;
+  padding: 2px 4px;
+  font-family: inherit;
+}
+
+.knob-label:hover {
+  border-color: #444;
+}
+
+.knob-label:focus {
+  border-color: #666;
+  outline: none;
+  background: #2a2a2a;
+}
+
+.knob-wrapper {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  padding: 4px;
+}
+
+.knob-value {
+  font-size: 18px;
+  font-weight: 600;
+  color: #e0e0e0;
+  font-variant-numeric: tabular-nums;
+  min-width: 3ch;
+  text-align: center;
+}
+
+.knob-cc {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.knob-cc-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.knob-cc-input {
+  width: 48px;
+  text-align: center;
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 13px;
+  padding: 2px 4px;
+  font-family: inherit;
+}
+
+.knob-cc-input:focus {
+  border-color: #666;
+  outline: none;
+}
+
+/* Hide number input spinners */
+.knob-cc-input::-webkit-inner-spin-button,
+.knob-cc-input::-webkit-outer-spin-button {
+  -webkit-appearance: none;
+  margin: 0;
+}
+
+.knob-cc-input {
+  -moz-appearance: textfield;
+  appearance: textfield;
+}

@@ -1,42 +1,121 @@
-#root {
-  max-width: 1280px;
+.app {
+  max-width: 960px;
   margin: 0 auto;
-  padding: 2rem;
-  text-align: center;
+  padding: 24px;
+  min-height: 100vh;
+  color: #e0e0e0;
 }
 
-.logo {
-  height: 6em;
-  padding: 1.5em;
-  will-change: filter;
-  transition: filter 300ms;
-}
-.logo:hover {
-  filter: drop-shadow(0 0 2em #646cffaa);
-}
-.logo.react:hover {
-  filter: drop-shadow(0 0 2em #61dafbaa);
+/* Header */
+.header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin-bottom: 32px;
+  padding-bottom: 16px;
+  border-bottom: 1px solid #333;
 }
 
-@keyframes logo-spin {
-  from {
-    transform: rotate(0deg);
-  }
-  to {
-    transform: rotate(360deg);
-  }
+.title {
+  font-size: 22px;
+  font-weight: 700;
+  color: #e0e0e0;
+  margin: 0;
 }
 
-@media (prefers-reduced-motion: no-preference) {
-  a:nth-of-type(2) .logo {
-    animation: logo-spin infinite 20s linear;
-  }
+.header-controls {
+  display: flex;
+  align-items: center;
+  gap: 20px;
 }
 
-.card {
-  padding: 2em;
+/* Status indicator */
+.status-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
 }
 
-.read-the-docs {
+.status-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #666;
+  transition: background 0.2s;
+}
+
+.status-dot.connected {
+  background: #4caf50;
+  box-shadow: 0 0 6px rgba(76, 175, 80, 0.5);
+}
+
+.status-text {
+  font-size: 13px;
   color: #888;
+}
+
+/* Channel selector */
+.channel-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.channel-label {
+  font-size: 11px;
+  color: #888;
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+}
+
+.channel-select {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 4px;
+  color: #ccc;
+  font-size: 13px;
+  padding: 4px 8px;
+  font-family: inherit;
+  cursor: pointer;
+}
+
+.channel-select:focus {
+  border-color: #666;
+  outline: none;
+}
+
+/* Settings button */
+.settings-btn {
+  background: #2a2a2a;
+  border: 1px solid #444;
+  border-radius: 6px;
+  color: #ccc;
+  font-size: 18px;
+  padding: 4px 10px;
+  cursor: pointer;
+  line-height: 1;
+  transition: border-color 0.15s;
+}
+
+.settings-btn:hover {
+  border-color: #666;
+  color: #fff;
+}
+
+/* Error banner */
+.error-banner {
+  background: #3a1c1c;
+  border: 1px solid #6b2c2c;
+  border-radius: 6px;
+  color: #e57373;
+  font-size: 14px;
+  padding: 10px 16px;
+  margin-bottom: 24px;
+}
+
+/* Knob grid */
+.knob-grid {
+  display: grid;
+  grid-template-columns: repeat(5, 1fr);
+  gap: 16px;
 }
