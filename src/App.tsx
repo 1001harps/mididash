@@ -1,4 +1,4 @@
-import { useState, useCallback } from "react";
+import { useState, useCallback, useRef } from "react";
 import { useMIDI } from "./hooks/useMIDI";
 import { KnobControl } from "./components/KnobControl";
 import { SettingsModal } from "./components/SettingsModal";
@@ -11,8 +11,24 @@ interface KnobConfig {
   value: number;
 }
 
+interface Control {
+  cc: number;
+  name: string;
+}
+
+interface Bank {
+  name: string;
+  channel: number;
+  controls: Control[];
+}
+
 const STORAGE_KEY_KNOBS = "mididash-knobs";
 const STORAGE_KEY_CHANNEL = "mididash-channel";
+const STORAGE_KEY_BANK_NAME = "mididash-bank-name";
+
+function loadBankName(): string {
+  return localStorage.getItem(STORAGE_KEY_BANK_NAME) || "Untitled Bank";
+}
 
 function loadKnobs(): KnobConfig[] {
   try {
@@ -45,7 +61,9 @@ function loadChannel(): number {
 function App() {
   const [knobs, setKnobs] = useState<KnobConfig[]>(loadKnobs);
   const [channel, setChannel] = useState<number>(loadChannel);
+  const [bankName, setBankName] = useState<string>(loadBankName);
   const [settingsOpen, setSettingsOpen] = useState(false);
+  const fileInputRef = useRef<HTMLInputElement>(null);
 
   const midi = useMIDI();
 
@@ -57,12 +75,65 @@ function App() {
     });
   }, []);
 
-  const handleChannelChange = (ch: number) => {
+  const handleChannelChange = useCallback((ch: number) => {
     if (ch >= 1 && ch <= 16) {
       setChannel(ch);
       localStorage.setItem(STORAGE_KEY_CHANNEL, String(ch));
     }
-  };
+  }, []);
+
+  const handleBankNameChange = useCallback((name: string) => {
+    setBankName(name);
+    localStorage.setItem(STORAGE_KEY_BANK_NAME, name);
+  }, []);
+
+  const exportBank = useCallback(() => {
+    const bank: Bank = {
+      name: bankName,
+      channel,
+      controls: knobs.map((k) => ({ cc: k.ccNumber, name: k.label })),
+    };
+    const json = JSON.stringify(bank, null, 2);
+    const blob = new Blob([json], { type: "application/json" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${bankName.replace(/[^a-zA-Z0-9_-]/g, "_")}.json`;
+    a.click();
+    URL.revokeObjectURL(url);
+  }, [bankName, channel, knobs]);
+
+  const importBank = useCallback(
+    (file: File) => {
+      const reader = new FileReader();
+      reader.onload = (e) => {
+        try {
+          const bank: Bank = JSON.parse(e.target?.result as string);
+          if (
+            typeof bank.channel !== "number" ||
+            !Array.isArray(bank.controls)
+          ) {
+            alert("Invalid bank file.");
+            return;
+          }
+          handleChannelChange(bank.channel);
+          if (bank.name) handleBankNameChange(bank.name);
+          const newKnobs: KnobConfig[] = bank.controls.map((c, i) => ({
+            id: i,
+            label: c.name,
+            ccNumber: c.cc,
+            value: 0,
+          }));
+          setKnobs(newKnobs);
+          localStorage.setItem(STORAGE_KEY_KNOBS, JSON.stringify(newKnobs));
+        } catch {
+          alert("Failed to parse bank file.");
+        }
+      };
+      reader.readAsText(file);
+    },
+    [handleChannelChange, handleBankNameChange],
+  );
 
   const handleValueChange = useCallback(
     (knob: KnobConfig, value: number) => {
@@ -75,7 +146,16 @@ function App() {
   return (
     <div className="app">
       <header className="header">
-        <h1 className="title">Mididash</h1>
+        <div className="title-group">
+          <h1 className="title">Mididash</h1>
+          <input
+            className="bank-name-input"
+            type="text"
+            value={bankName}
+            onChange={(e) => handleBankNameChange(e.target.value)}
+            placeholder="Bank name"
+          />
+        </div>
 
         <div className="header-controls">
           <div className="status-group">
@@ -110,6 +190,56 @@ function App() {
               ))}
             </select>
           </div>
+
+          <button
+            className="header-btn"
+            onClick={exportBank}
+            title="Export Bank"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M8 2v8M4.5 7.5 8 11l3.5-3.5M3 13h10" />
+            </svg>
+          </button>
+
+          <button
+            className="header-btn"
+            onClick={() => fileInputRef.current?.click()}
+            title="Import Bank"
+          >
+            <svg
+              width="16"
+              height="16"
+              viewBox="0 0 16 16"
+              fill="none"
+              stroke="currentColor"
+              strokeWidth="1.5"
+              strokeLinecap="round"
+              strokeLinejoin="round"
+            >
+              <path d="M2 13V6.5a1 1 0 0 1 1-1h2.5L7 3.5h5a1 1 0 0 1 1 1V13a1 1 0 0 1-1 1H3a1 1 0 0 1-1-1Z" />
+            </svg>
+          </button>
+
+          <input
+            ref={fileInputRef}
+            type="file"
+            accept=".json"
+            style={{ display: "none" }}
+            onChange={(e) => {
+              const file = e.target.files?.[0];
+              if (file) importBank(file);
+              e.target.value = "";
+            }}
+          />
 
           <button
             className="settings-btn"
